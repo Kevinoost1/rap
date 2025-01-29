@@ -6,140 +6,153 @@ from transformers import BertTokenizer, BertModel, AutoModel, AutoTokenizer, Aut
 import numpy as np
 from sklearn.cluster import KMeans, MiniBatchKMeans, DBSCAN
 from sklearn.preprocessing import StandardScaler
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-from sklearn.metrics import silhouette_score, silhouette_samples, homogeneity_completeness_v_measure
-from sklearn.mixture import GaussianMixture
-import shutil
-import os
+
+"""
+This class: TextFilters, filters messy text (text from which meaning is possibly hard to extract).
+It does this for each transcript in the dataframe such that
+the end result will be a dataframe of transcripts that contain the least amount of confusing transcripts.
+One example of messy text in the current dataframe is:
+
+eng_7283110983239847200.txt: " Run, run, run, run! I’m all set. Oh, oh, oh, oh! One "
+
+Currently, two main methods are used for identifying messy transcripts and filtering them:
+
+- A heuristic approach -> It selects transcripts with a low word count.
+                            And transcripts that have little unique words (word diversity)
+- A perplexity approach -> It calculates the perplexity of all transcripts (how 'confused' the model is by the word, given all the other words)
+
+In total the heuristic approach takes two manual parameters that can be tuned:
+- The word count (maximum words allowed). By default, this is set at 10
+- The word diversity (ratio unique words vs. total words). By default, this is set at 0.3
+
+The perplexity approach takes one manual parameter
+- The perplexity threshold (maximum perplexity allowed for a transcript). By default, this is set at 100
+"""
+
 
 def main():
-    new_csv = Filtering('translated_df_copy.csv', do_heuristic_filter=False,
-                        do_perplexity_filter=False, filter_out_perplexity=False)
+    filtered_csv = TextFilter('translated_df_copy.csv',
+                              apply_heuristic_filter=False,
+                              apply_perplexity_filter=False,
+                              filter_out_perplexity=False
+                              )
 
-    # perp_name = 'translated_df_copy_heuristic_perplexity'
-    # perp_csv = pd.read_csv('translated_df_copy_heuristic_perplexity.csv')
-    # filter_perp = perp_csv[perp_csv['perplexity'] < 100]
-    # filter_perp.to_csv(f'{perp_name}_out100.csv')
 
-# Again creation of the filtering within a class to allow for a possible automatic pipeline
-class Filtering:
-    def __init__(self, translated_csv, do_heuristic_filter=False, max_words_heuristic=10,
-                 max_diversity_heuristic=0.3, do_perplexity_filter=False, model='gpt2-xl'
-                 , filter_out_perplexity=False, perplexity_threshold=100):
-        # Initialization of global variables
-        self.working_csv = pd.read_csv(translated_csv)
-        self.translated_csv = translated_csv
-        self.do_heuristic_filter = do_heuristic_filter
-        self.max_words_heuristic = max_words_heuristic
-        self.max_diversity_heuristic = max_diversity_heuristic
-        self.do_perplexity_filter = do_perplexity_filter
-        self.model = model
-        self.filter_out_perplexity = filter_out_perplexity
-        self.perplexity_threshold = perplexity_threshold
+class TextFilter:
 
-        # All these functions allow for user specification of which function to execute
-        if self.do_heuristic_filter:
-            self.working_csv = self.heuristics(self.working_csv)
-            self.working_csv.to_csv(f'{self.translated_csv[:-4]}_heuristic.csv', index=False)
-            self.translated_csv = f'{self.translated_csv[:-4]}_heuristic.csv'
-            print(f'heuristics successfully applied to {self.translated_csv[:-4]}_heuristic.csv')
+    def __init__(self,
+                 input_csv,
+                 max_words_allowed: int = 10,
+                 max_diversity_allowed: float = 0.3,
+                 perplexity_threshold: float = 100,
 
-        if self.do_perplexity_filter:
-            self.working_csv = self.perplexity_filter(self.working_csv)
-            self.working_csv.to_csv(f'{self.translated_csv[:-4]}_perplexity.csv')
-            print(f'perplexity successfully calculated and added to {self.translated_csv[:-4]}_perplexity.csv')
+                 model_for_perplexity_calculation: str = 'gpt2-xl',
+
+                 # These are variables that are used if you want to run each function separately
+                 apply_heuristic_filter: bool = False,
+                 apply_perplexity_filter: bool = False,
+                 filter_out_perplexity: bool = False,
+                 ):
+
+        self.input_csv_name: str = input_csv
+        self.working_df: pd.DataFrame = pd.read_csv(input_csv)
+        self.max_words_allowed: int = max_words_allowed
+        self.max_diversity_allowed: float = max_diversity_allowed
+        self.perplexity_threshold: float = perplexity_threshold
+
+        self.model_for_perplexity_calculation = model_for_perplexity_calculation
+
+        self.apply_heuristic_filter: bool = apply_heuristic_filter
+        self.apply_perplexity_filter: bool = apply_perplexity_filter
+        self.filter_out_perplexity: bool = filter_out_perplexity
+
+        # All these functions allow for user specification of which function to execute.
+        # These are for testing and personalization. These do not have to be looked at.
+        if self.apply_heuristic_filter:
+            self.working_df = self.apply_heuristics()
+
+            self.working_df.to_csv(f'{self.input_csv_name[:-4]}_heuristic.csv', index=False)
+            self.input_csv_name = f'{self.input_csv_name[:-4]}_heuristic.csv'
+            print(f'heuristics successfully applied to {self.input_csv_name[:-4]}_heuristic.csv')
+
+        if self.apply_perplexity_filter:
+            self.working_df = self.apply_heuristics()
+
+            self.working_df.to_csv(f'{self.input_csv_name[:-4]}_perplexity.csv', index=False)
+            print(f'perplexity successfully calculated and added to {self.input_csv_name[:-4]}_perplexity.csv')
 
         if self.filter_out_perplexity:
-            self.working_csv = self.filter_away_perplexity(self.working_csv)
-            self.working_csv.to_csv(f'{self.translated_csv[:-4]}_perplexity_out{perplexity_threshold}.csv')
-            print(f'perplexity over {perplexity_threshold} was correctly filter out in {self.translated_csv[:-4]}_perplexity_out{perplexity_threshold}.csv')
+            self.working_df = self.delete_perplexity_threshold()
 
-    # The heuristics filter function
-    def heuristics(self, translated_df):
-        # Makes two empty dicts for the two heuristics
+            self.working_df.to_csv(f'{self.input_csv_name[:-4]}_perplexity_out{perplexity_threshold}.csv')
+            print(
+                f'perplexity over {perplexity_threshold} was correctly filter out in {self.input_csv_name[:-4]}_perplexity_out{perplexity_threshold}.csv')
+
+    # The function for the heuristics approach of filtering
+    def apply_heuristics(self):
         word_diversity_dict = {}
         word_count_dict = {}
-        # Loops through the transcripts and also retrieves the index
-        for i, text in enumerate(translated_df['original_text']):
+
+        for i, text in enumerate(self.working_df['original_text']):
             text = text.lower()
             words = text.split()
-            # Calculates the number of words and unique words
+
             num_words = len(words)
             unique_words = set(words)
             word_diversity = len(unique_words) / num_words
-            # Adds the word count and diversity to the dicts along with the index in the df
+
             word_diversity_dict[i] = word_diversity
             word_count_dict[i] = num_words
-        # Loop to check if a line has a low word count
-        # If it does, retrieve the index and list it
+
         index_low_word = []
-        for key, items in word_count_dict.items():
-            if items < self.max_words_heuristic:
-                low_word_item = translated_df['original_text'][key]
-                low_word_item_i = key
-                index_low_word.append(low_word_item_i)
+        for max_words_key, max_words_items in word_count_dict.items():
+            if max_words_items < self.max_words_allowed:
+                index_low_word.append(max_words_key)
 
-        # Does the same thing for transcripts with low diversity
         index_low_div = []
-        for div_key, div_item in word_diversity_dict.items():
-            if div_item < self.max_diversity_heuristic:
-                low_div_item = translated_df['original_text'][div_key]
-                low_div_item_i = div_key
-                index_low_div.append(low_div_item_i)
+        for min_div_key, min_div_item in word_diversity_dict.items():
+            if min_div_item < self.max_diversity_allowed:
+                index_low_div.append(min_div_key)
 
-        # Takes both index lists and drops rows, based on union of the two index lists
-        indices_to_drop = set(index_low_word).union(index_low_div)
-        no_low_df = translated_df.drop(translated_df.index[list(indices_to_drop)])
+        indices_to_drop_from_df = set(index_low_word).union(index_low_div)
+        no_low_df = self.working_df.drop(self.working_df.index[list(indices_to_drop_from_df)])
         no_low_df = no_low_df.reset_index(drop=True)
-        deleted = translated_df.iloc[list(indices_to_drop)]
-        deleted.to_csv('heuristic_deleted.csv')
+        deleted = self.working_df.iloc[list(indices_to_drop_from_df)]
+        deleted.to_csv('heuristic_applied.csv')
 
         return no_low_df
 
-    # Function for calculating perplexity
-    def perplexity_filter(self, translated_df):
-        # Initialize model and tokenizer
-        model_name = self.model
-        tokenizer_gpt = AutoTokenizer.from_pretrained(model_name)
-
-        # Model is again run on GPU if availlable
+    # The function for the perplexity approach to filtering
+    def apply_perplexity_filter(self):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f'{self.model} was loaded onto {device}')
-        model_gpt = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+        print(f'{self.model_for_perplexity_calculation} was loaded onto {device}')
+
+        tokenizer_gpt = AutoTokenizer.from_pretrained(self.model_for_perplexity_calculation)
+        model_gpt = AutoModelForCausalLM.from_pretrained(self.model_for_perplexity_calculation).to(device)
 
         perplexity_scores = []
         count = 0
-        # Loops through all the transcripts
-        for text in translated_df['original_text']:
-            # Generates inputs for the model
+        for text in self.working_df['original_text']:
             inputs = tokenizer_gpt(text, return_tensors="pt", truncation=True, max_length=1024).to(device)
-
-            # With torch no grad to save computation (we don't need to calculate gradients)
             with torch.no_grad():
-                # Generates the outputs
                 outputs = model_gpt(**inputs, labels=inputs['input_ids'])
 
-            # Retrieves the loss from the model
             loss = outputs.loss.item()
-            # Perplexity is the exponent of the loss
+
             perplexity_score = torch.exp(torch.tensor(loss)).item()
             perplexity_scores.append(perplexity_score)
             count += 1
-            print(f'{count} / {len(translated_df)}')
-            # Empties GPU memory after each transcript
+            print(f'{count} / {len(self.working_df)}')
+
             torch.cuda.empty_cache()
 
-        # Adds perplexity to the dataframe
-        translated_df['perplexity'] = perplexity_scores
-        return translated_df
+        self.working_df['perplexity'] = perplexity_scores
+        return self.working_df
 
-    # Filters out rows with perplexity lower than threshold
-    def filter_away_perplexity(self, translated_df):
-        translated_df = translated_df[translated_df['perplexity'] < self.perplexity_threshold]
-        return translated_df
-
+    # Function to filter out transcripts lower than perplexity threshold
+    def delete_perplexity_threshold(self):
+        self.working_df = self.working_df[self.working_df['perplexity'] < self.perplexity_threshold]
+        return self.working_df
 
 
 if __name__ == '__main__':
