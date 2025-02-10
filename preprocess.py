@@ -7,6 +7,19 @@ import google.protobuf
 import sentencepiece as spm
 import pandas as pd
 
+"""
+This scripts contains a preprocessing pipeline for the TikTok transcripts. 
+You can input the directory that contains the files and a target directory (where they will be move to).
+This code assumes that the TikTok transcript data is formatted in the same way as the first files I got.
+
+You can execute each step of the preprocessing pipeline separately or all at once by manipulating the True and False.
+Do keep in mind that steps have to be done in order and the code assumes that previous steps have been done, before you call a later one.
+
+For the translation a BART model from huggingface is used. 
+This model only does the dutch .txt files for now, but can be extended to include more languages. 
+"""
+
+
 def main():
     # The preprocess class can be initialized with different steps activated (depending on what you want)
     # You can off course do all the steps at once, but for testing it might be nice to do it in part
