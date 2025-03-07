@@ -24,6 +24,12 @@ def create_test_set(dataframe):
 # Proposed categories for labelling:
 
 # Politics & Social Issues (politics)
+# political campaign
+# climate change
+# beleid
+# polarizing topics (manosphere?)
+
+
 # Conspiracy theories & Misinformation
 # Health & Fitness (health)
 # Personal vlogs & Daily life (vlog)
