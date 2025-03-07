@@ -5,8 +5,9 @@ from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           pipeline, AutoModelForCausalLM, BitsAndBytesConfig, AutoModel)
 from scipy.special import softmax
 from collections import Counter
+import numpy as np
 from huggingface_hub import login
-# login(token='....') This line is censored for security reasons
+# login(token=...)
 
 """
 This is the script that contain all the different models that will be deployed on the data.
@@ -23,16 +24,24 @@ For now, this script contains:
 
 
 def main():
-    analysis = NLP_Analysis('translated_df_copy.csv')
-    analyzed_df = analysis.roberta_tweet()
+    analysis = NLP_Analysis('test_sets/labelled.csv')
+    # analyzed_df = analysis.roberta_tweet()
 
     # print(analysis.llama3())
+    with open('test_transcripts.txt', 'w', encoding='utf-8') as f:
+        pass
+
+    with open('test_transcripts.txt', 'a', encoding='utf-8') as f:
+        for text in pd.read_csv('test_sets/labelled.csv', delimiter=';')['original_text']:
+            f.write(text + '\n')
+
+
 
 
 
 class NLP_Analysis:
     def __init__(self, csv):
-        self.working_df = pd.read_csv(csv)
+        self.working_df = pd.read_csv(csv, delimiter=';', encoding='utf-8')
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     def roberta_tweet(self):
@@ -97,10 +106,8 @@ class NLP_Analysis:
         top_tokenizer = AutoTokenizer.from_pretrained(top_model_name)
         top_model = AutoModelForSequenceClassification.from_pretrained(top_model_name).to(self.device)
 
-        top_label_1 = []
-        top_label_2 = []
-        top_confidence_1 = []
-        top_confidence_2 = []
+        top_labels = [[] for _ in range(5)]
+        top_confidences = [[] for _ in range(5)]
         count = 0
         for text in self.working_df['original_text']:
             top_inputs = top_tokenizer(text, return_tensors='pt', truncation=True, max_length=512).to(self.device)
@@ -116,20 +123,24 @@ class NLP_Analysis:
                 reverse=True
             )
 
-            sorted_labels = [label for label in sorted_labels if label["score"] > 0.1]
+            sorted_labels = [label for label in sorted_labels if label["score"] > 0.02]
 
-            top_label_1.append(sorted_labels[0]["label"] if len(sorted_labels) > 0 else None)
-            top_confidence_1.append(sorted_labels[0]["score"] if len(sorted_labels) > 0 else None)
-
-            top_label_2.append(sorted_labels[1]["label"] if len(sorted_labels) > 1 else None)
-            top_confidence_2.append(sorted_labels[1]["score"] if len(sorted_labels) > 1 else None)
+            for i in range(5):
+                if i < len(sorted_labels):
+                    top_labels[i].append(sorted_labels[i]["label"])
+                    top_confidences[i].append(sorted_labels[i]["score"])
+                else:
+                    top_labels[i].append(None)
+                    top_confidences[i].append(None)
 
             count += 1
             print(f'{count} / {len(self.working_df)}')
 
-        self.working_df['top_roberta_class1'] = top_label_1
-        self.working_df['top_roberta_class2'] = top_label_2
-        self.working_df.to_csv('analyzed_csv.csv')
+        for i in range(5):
+            self.working_df[f'top_roberta_class{i + 1}'] = top_labels[i]
+            self.working_df[f'top_roberta_confidence{i + 1}'] = top_confidences[i]
+
+        self.working_df.to_csv('labelled_test_set_5labels.csv')
         return self.working_df
 
     def divide_in_parts(self, text, max_length=512):
@@ -152,10 +163,25 @@ class NLP_Analysis:
 
             return parts
 
+    def add_classification (self):
+        add_model_name = 'bondarchukb/bert-ads-classification'
+        add_tokenizer = AutoTokenizer.from_pretrained(add_model_name)
+        add_model = AutoModelForSequenceClassification.from_pretrained(add_model_name, use_safetensors=True).to(self.device)
+
+        predictions = []
+        for text in self.working_df['original_text'][:20]:
+            add_input = add_tokenizer(text, return_tensors='pt', truncation=True, max_length=512).to(self.device)
+            with torch.no_grad():
+                output = add_model(**add_input)
+                scores = output[0][0].detach().cpu().numpy()
+            scores = softmax(scores)
+            predictions.append(np.argmax(scores))
+        return predictions
+
     def llama3(self):
 
-        model_name = "meta-llama/Llama-2-3b-hf"
-        # hf_token = ... Again censored for security reasons
+        model_name = "meta-llama/Llama-2-7b-hf"
+        # hf_token = ''
 
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -179,18 +205,19 @@ class NLP_Analysis:
             max_new_tokens=20,
         )
 
-        messages = [
-            {"role": "system",
-             "content": "You have to classify a line of text based on main topic. Do so in a one word response."
-                        "You have the following choices for topics: "
-                        "relationships, dairies & daily life, politics, and food & cooking"},
-            {"role": "user", "content": "If I wanted to kill my husband,  I'd do it and I wouldn't get caught."},
-        ]
-        prompt = f"<s>[INST] {messages[0]['content']} [/INST] {messages[1]['content']} </s>"
+        for text in self.working_df['original_text'][:10]:
+            messages = [
+                {"role": "system",
+                 "content": "You have to classify a line of text based on main topic. Do so in a one word response (only return the category)."
+                            "You have the following choices for topics: "
+                            "relationships, dairies & daily life, politics, and food & cooking"},
+                {"role": "user", "content": text},
+            ]
+            prompt = f"[INST] {messages[0]['content']} [/INST] {messages[1]['content']}\nAnswer:"
 
-        response = text_gen(prompt)
-        output = response[0]['generated_text']
-        print(output)
+            response = text_gen(prompt)
+            output = response[0]['generated_text']
+            print(output)
         return(output)
 
 
