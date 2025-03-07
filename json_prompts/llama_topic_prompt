@@ -1,0 +1,41 @@
+{
+  "system_prompt": "# \"Main subject\" in tiktok transcript data\n\nIt is vital to accurately categorize what the \"Main subject\" is of the video. For this immediate project, please distinguish the following topic categories: \n\n{categories}",
+  "prompt_format": "## Fragment {n}.\n\n> {item}\n\n Please choose the most fitting \"Main subject\" for these tiktok transcripts (A-L; but try to avoid L (Other) if at all possible!).",
+  "categories": {
+    "Politics and Social Issues": "Discussions, opinions, news, and commentary on government policies, political events, elections, politicians, activism, social justice, human rights, laws, and societal challenges. It also covers topics related to discrimination, inequality, freedom of speech, environmental policies, public health policies, and other matters affecting communities and governance at local, national, or global levels.",
+    "Health and Fitness": "Content related to physical and mental well-being, including exercise routines, nutrition, wellness tips, medical advice, mental health awareness, self-care practices, and discussions on diseases, treatments, or healthcare trends.",
+    "Personal Vlogs & Daily Life ": "Videos documenting personal experiences, daily routines, life updates, or behind-the-scenes moments. This category includes casual storytelling, travel diaries, day in my life content, and general lifestyle vlogging.",
+    "Relationships": "Discussions or content about romantic relationships, friendships, family dynamics, dating advice, breakups, love languages, and social interactions. This includes personal stories, relationship challenges, and tips for improving interpersonal connections.",
+    "Fashion and Beauty": "Content focused on style, makeup, skincare, haircare, outfit inspiration, beauty tutorials, fashion trends, and personal grooming. It may also include product reviews, beauty hacks, and discussions on self-expression through fashion and cosmetics.",
+    "Food and Dining": "Content related to cooking, recipes, food reviews, restaurant experiences, mukbangs, food trends, nutrition tips, and culinary techniques. This includes homemade meals, street food exploration, and cultural food discussions.",
+    "Art and Culture": "Content showcasing creative expression, including painting, drawing, gaming, music, dance, literature, theater, photography, and film. This also covers discussions on cultural heritage, artistic movements, and creative processes.",
+    "Self-Improvement": "Videos focused on personal growth, productivity, motivation, mental resilience, life skills, career advice, goal-setting, and self-care habits. This category includes content on learning new skills, overcoming challenges, and fostering a positive mindset.",
+    "Meme": "Humorous, satirical, or trend-based content, including internet challenges, viral jokes, reaction videos, and comedic skits. This category covers lighthearted and entertaining content meant to engage through humor and relatability.",
+    "Gender": "Content discussing topics related to gender identity, gender roles, feminism, masculinity, LGBTQ+ experiences, societal expectations, and gender-related issues. This includes discussions on equality, representation, personal experiences, and cultural perspectives on gender.",
+    "Crime": "Content related to criminal activity, law enforcement, true crime stories, legal cases, investigations, forensic science, and discussions on justice and criminal behavior. This category also includes crime documentaries, analysis of famous cases, and awareness about crime prevention.",
+    "Other": "Anything that does not fit any of the other categories."
+    
+  },
+  "examples": [
+    {
+      "item": "every time that I party and a guy like  comes to me and says something about like  you look cute or you look pretty or something I'm like  bombastic side eye  criminal offensive side eye  get away from me  but if a girl does it  I'm like oh my God  I wanna be your best friend right now  when guys give compliments to me  I accept if they're gay  like they're straight  I'm like no  no no no no  but if a girl does it  it's like you are everything ",
+      "response": 9
+    },
+    {
+      "item": "  this is my meal  I call this girl dinner  girl dinner  girl dinner  girl dinner oh girl ",
+      "response": 8
+    },
+    {
+      "item": "what on earth is going on in the house of Commons ",
+      "response": 0
+    },
+    {
+      "item": "  okay fine I love you more than my dogs  I love you more than anyone actually  is that weird ",
+      "response": 3
+    },
+    {
+      "item": "people don't even want to be rich  like I don't want to be rich  Life's too short to exercise  diets are 95% failure rate  why would I do something that's gonna fail  so you want to be normal  so you just want to be like everybody else  that roams the world  not knowing the power that's in them  being fine with being mediocre",
+      "response": 7
+    }
+  ]
+}
