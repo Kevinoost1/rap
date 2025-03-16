@@ -4,4 +4,4 @@ Warning:
 The code might still be a bit messy. 
 This is a work in progress and thus the code might still be inefficient or not well-structured.
 
-However, all parts should work and the code should be improved in the comming weeks/months.
+However, all parts should work and the code should be improved in the coming weeks/months.
