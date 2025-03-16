@@ -1,0 +1,34 @@
+{
+  "system_prompt": "# \"Main sentiment\" in tiktok transcript data\n\nIt is vital to accurately categorize what the \"Main sentiment\" is of the video. For this immediate project, please distinguish the following sentiment categories: \n\n{categories}",
+  "prompt_format": "## Fragment {n}.\n\n> {item}\n\n Please choose the most fitting \"Main sentiment\" for these tiktok transcripts (A-E).",
+  "categories": {
+    "Very Negative": "The text expresses strong negative emotions such as anger, disgust, frustration, sadness, or intense criticism. It may include harsh language, personal attacks, complaints, or expressions of extreme dissatisfaction.",
+    "Negative": "The text conveys a generally unfavorable sentiment, such as mild disappointment, annoyance, concern, or critique. It may include dissatisfaction but lacks extreme negativity.",
+    "Neutral": "The text does not express clear positive or negative emotions. It may be factual, objective, or lack any sentiment-driven language.",
+    "Positive": "The text conveys a favorable sentiment, such as mild appreciation, happiness, excitement, or approval. It may contain praise, encouragement, or expressions of satisfaction but without strong intensity.",
+    "Very positive": "The text expresses strong positive emotions such as enthusiasm, joy, deep appreciation, or excitement. It may include highly supportive language, strong praise, admiration, or expressions of extreme satisfaction."
+    
+  },
+  "examples": [
+    {
+      "item": "where are you going  why are you approaching me  can you not  sir can I what  what the fuck  what the fuck",
+      "response": 0
+    },
+    {
+      "item": " I will stand with you between the heavens and the earth  I will tell you where you are  do you love me I love you ",
+      "response": 4
+    },
+    {
+      "item": "what on earth is going on in the house of Commons ",
+      "response": 1
+    },
+    {
+      "item": "What do you want to be when you grow up",
+      "response": 2
+    },
+    {
+      "item": "Realistic simulation at different speeds.  Hmm. It's not that bad.",
+      "response": 3
+    }
+  ]
+}
