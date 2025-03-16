@@ -21,25 +21,7 @@ def create_test_set(dataframe):
     test_set = dataframe.iloc[random_indexes]
     return test_set
 
-# Proposed categories for labelling:
 
-# Politics & Social Issues (politics)
-# political campaign
-# climate change
-# beleid
-# polarizing topics (manosphere?)
-
-
-# Conspiracy theories & Misinformation
-# Health & Fitness (health)
-# Personal vlogs & Daily life (vlog)
-# Relationships (relationships)
-# Fashion & Beauty (beauty)
-# Food & Dining (food)
-# Art & Culture (art)
-# Self-Improvement (self)
-# Meme
-# Misc.
 
 
 
