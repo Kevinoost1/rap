@@ -18,7 +18,6 @@ Just load in a dataset into the NLP_Analysis object.
 After object init, you can choose the model for analysis.
 For now, this script contains:
 1. topic and sentiment analysis with a tweet trained ROBERTA.
-2. Starting and bare bones code for use of llama 2
 
 """
 
@@ -26,15 +25,6 @@ For now, this script contains:
 def main():
     analysis = NLP_Analysis('translated_df_copy_heuristic_perplexity_out100.csv')
     analyzed_df = analysis.roberta_tweet()
-
-    # print(analysis.llama3())
-    # with open('test_transcripts.txt', 'w', encoding='utf-8') as f:
-    #     pass
-    #
-    # with open('test_transcripts.txt', 'a', encoding='utf-8') as f:
-    #     for text in pd.read_csv('test_sets/labelled.csv', delimiter=';')['original_text']:
-    #         f.write(text + '\n')
-
 
 
 
@@ -163,62 +153,6 @@ class NLP_Analysis:
 
             return parts
 
-    def add_classification (self):
-        add_model_name = 'bondarchukb/bert-ads-classification'
-        add_tokenizer = AutoTokenizer.from_pretrained(add_model_name)
-        add_model = AutoModelForSequenceClassification.from_pretrained(add_model_name, use_safetensors=True).to(self.device)
-
-        predictions = []
-        for text in self.working_df['original_text'][:20]:
-            add_input = add_tokenizer(text, return_tensors='pt', truncation=True, max_length=512).to(self.device)
-            with torch.no_grad():
-                output = add_model(**add_input)
-                scores = output[0][0].detach().cpu().numpy()
-            scores = softmax(scores)
-            predictions.append(np.argmax(scores))
-        return predictions
-
-    def llama3(self):
-
-        model_name = "meta-llama/Llama-2-7b-hf"
-        # hf_token = ''
-
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type='nf4',
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            load_in_8bit_fp32_cpu_offload=True
-        )
-        llama_tokenizer = AutoTokenizer.from_pretrained(model_name)
-        llama_tokenizer.pad_token = llama_tokenizer.eos_token
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            quantization_config=bnb_config,
-            device_map='auto'
-        )
-
-        text_gen = pipeline(
-            'text-generation',
-            model=model,
-            tokenizer=llama_tokenizer,
-            max_new_tokens=20,
-        )
-
-        for text in self.working_df['original_text'][:10]:
-            messages = [
-                {"role": "system",
-                 "content": "You have to classify a line of text based on main topic. Do so in a one word response (only return the category)."
-                            "You have the following choices for topics: "
-                            "relationships, dairies & daily life, politics, and food & cooking"},
-                {"role": "user", "content": text},
-            ]
-            prompt = f"[INST] {messages[0]['content']} [/INST] {messages[1]['content']}\nAnswer:"
-
-            response = text_gen(prompt)
-            output = response[0]['generated_text']
-            print(output)
-        return(output)
 
 
 
