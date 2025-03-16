@@ -24,16 +24,16 @@ For now, this script contains:
 
 
 def main():
-    analysis = NLP_Analysis('test_sets/labelled.csv')
-    # analyzed_df = analysis.roberta_tweet()
+    analysis = NLP_Analysis('translated_df_copy_heuristic_perplexity_out100.csv')
+    analyzed_df = analysis.roberta_tweet()
 
     # print(analysis.llama3())
-    with open('test_transcripts.txt', 'w', encoding='utf-8') as f:
-        pass
-
-    with open('test_transcripts.txt', 'a', encoding='utf-8') as f:
-        for text in pd.read_csv('test_sets/labelled.csv', delimiter=';')['original_text']:
-            f.write(text + '\n')
+    # with open('test_transcripts.txt', 'w', encoding='utf-8') as f:
+    #     pass
+    #
+    # with open('test_transcripts.txt', 'a', encoding='utf-8') as f:
+    #     for text in pd.read_csv('test_sets/labelled.csv', delimiter=';')['original_text']:
+    #         f.write(text + '\n')
 
 
 
@@ -41,7 +41,7 @@ def main():
 
 class NLP_Analysis:
     def __init__(self, csv):
-        self.working_df = pd.read_csv(csv, delimiter=';', encoding='utf-8')
+        self.working_df = pd.read_csv(csv, encoding='utf-8')
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     def roberta_tweet(self):
@@ -123,7 +123,7 @@ class NLP_Analysis:
                 reverse=True
             )
 
-            sorted_labels = [label for label in sorted_labels if label["score"] > 0.02]
+            sorted_labels = [label for label in sorted_labels if label["score"] > 0.05]
 
             for i in range(5):
                 if i < len(sorted_labels):
@@ -140,7 +140,7 @@ class NLP_Analysis:
             self.working_df[f'top_roberta_class{i + 1}'] = top_labels[i]
             self.working_df[f'top_roberta_confidence{i + 1}'] = top_confidences[i]
 
-        self.working_df.to_csv('labelled_test_set_5labels.csv')
+        self.working_df.to_csv('roberta_analyzed.csv')
         return self.working_df
 
     def divide_in_parts(self, text, max_length=512):
